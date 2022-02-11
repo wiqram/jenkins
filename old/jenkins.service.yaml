@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: jenkins
+  labels:
+    app: jenkins
+spec:
+  type: NodePort
+  ports:
+    - name: ui
+      port: 8080
+      nodePort: 30380
+      targetPort: 8080
+      protocol: TCP
+    - name: slave
+      port: 50000
+      #nodePort: 30350
+      protocol: TCP
+    - name: http
+      port: 80
+      #nodePort: 30280
+      targetPort: 8080
+  selector:
+    app: jenkins
