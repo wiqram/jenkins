@@ -5,6 +5,79 @@ metadata:
   name: jenkins
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-deployer
+  namespace: jenkins
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: jenkins-deployer
+  namespace: jenkins
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get","list","watch"]
+  - apiGroups: [ "" ]
+    resources: [ "namespaces" ]
+    verbs: [ "create","delete" ]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create","delete","get","list","patch","update"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create","delete","get","list","patch","update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["create","delete","get","list","patch","update"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create","delete","get","list","patch","update"]
+  - apiGroups: [""]
+    resources: ["ingresses"]
+    verbs: ["create","delete","get","list","patch","update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-deployer
+  namespace: jenkins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-deployer
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-deployer
+    namespace: jenkins
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-deployer
+  namespace: jenkins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-deployer
+    namespace: jenkins
+---
+#apiVersion: v1
+#kind: Namespace
+#metadata:
+#  name: yolo
+#---
+apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: jenkins
@@ -91,7 +164,8 @@ spec:
       labels:
         app: jenkins
     spec:
-      serviceAccountName: jenkins
+      serviceAccountName: jenkins-deployer
+      automountServiceAccountToken: true
       containers:
         - name: jenkins
           image: jenkins/jenkins:latest
@@ -101,9 +175,9 @@ spec:
               value: -Xmx2048m -Dhudson.slaves.NodeProvisioner.MARGIN=50 -Dhudson.slaves.NodeProvisioner.MARGIN0=0.85
           ports:
             - containerPort: 8080
-              protocol: TCP
+              name: httpport
             - containerPort: 50000
-              protocol: TCP
+              name: jnlpport
           volumeMounts:
             - mountPath: /var/jenkins_home
               name: jenkins
@@ -116,57 +190,19 @@ spec:
           persistentVolumeClaim:
             claimName: jenkins-claim
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: jenkins
-  namespace: jenkins
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: jenkins
-  namespace: jenkins
-rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["create","delete","get","list","patch","update","watch"]
-  - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create","delete","get","list","patch","update","watch"]
-  - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get","list","watch"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["create","delete","get","list","patch","update"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["create","delete","get","list","patch","update"]
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["create","delete","get","list","patch","update"]
-  - apiGroups: [""]
-    resources: ["services"]
-    verbs: ["create","delete","get","list","patch","update"]
-  - apiGroups: [""]
-    resources: ["ingresses"]
-    verbs: ["create","delete","get","list","patch","update"]
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: jenkins
-  namespace: jenkins
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: jenkins
-subjects:
-  - kind: ServiceAccount
-    name: jenkins
-    namespace: jenkins
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: ClusterRoleBinding
+#metadata:
+#  name: jenkins-deployer
+#  namespace: jenkins
+#roleRef:
+#  apiGroup: rbac.authorization.k8s.io
+#  kind: ClusterRole
+#  name: cluster-admin
+#subjects:
+#  - kind: ServiceAccount
+#    name: jenkins-deployer
+#    namespace: jenkins
 ---
 apiVersion: v1
 kind: Service
@@ -178,15 +214,15 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - name: ui
+    - name: httpport
       port: 8080
       nodePort: 30380
       targetPort: 8080
-      protocol: TCP
-    - name: slave
+     # protocol: TCP
+    - name: jnlpport
       port: 50000
       #nodePort: 30350
-      protocol: TCP
+      #protocol: TCP
     - name: http
       port: 80
       #nodePort: 30280
