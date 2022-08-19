@@ -1,0 +1,8 @@
+docker build -t container-registry.traderyolo.com/jenkins-inbound-agent-vik:cloud .
+docker push container-registry.traderyolo.com/jenkins-inbound-agent-vik:cloud
+
+curl -sO http://jenkins.jenkins.svc.cluster.local:8080/jnlpJars/agent.jar
+java -jar agent.jar -jnlpUrl http://jenkins.jenkins.svc.cluster.local:8080/manage/computer/agent%2Dtlhkm/jenkins-agent.jnlp -secret 4781e73142b7a50b54486dc197065fa5284aaa7e3d364cf1ff647d266c3df518 -workDir "/home/jenkins/"
+
+
+docker run --init jenkins/inbound-agent -url http://172.16.238.2:30350 -workDir=/home/jenkins/agent 4781e73142b7a50b54486dc197065fa5284aaa7e3d364cf1ff647d266c3df518 agent

@@ -221,7 +221,7 @@ spec:
      # protocol: TCP
     - name: jnlpport
       port: 50000
-      #nodePort: 30350
+      nodePort: 30350
       #protocol: TCP
     - name: http
       port: 80

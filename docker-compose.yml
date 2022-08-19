@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  user:
+    build:
+      context: ./inbound-agent
+    image: ${REGISTRY_HOST}/inbound-agent-vik
