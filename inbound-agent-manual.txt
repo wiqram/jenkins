@@ -6,3 +6,8 @@ java -jar agent.jar -jnlpUrl http://jenkins.jenkins.svc.cluster.local:8080/manag
 
 
 docker run --init jenkins/inbound-agent -url http://172.16.238.2:30350 -workDir=/home/jenkins/agent 4781e73142b7a50b54486dc197065fa5284aaa7e3d364cf1ff647d266c3df518 agent
+
+curl https://172.16.238.2:2376/version \
+  --cert server.pem \
+  --key server-key.pem \
+  --cacert ca.pem
