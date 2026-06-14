@@ -9,11 +9,13 @@ RUN apt-get -y upgrade
 RUN apt-get -y install curl
 RUN apt-get -y install wget
 RUN curl --version
-RUN apt-get -y install software-properties-common
+RUN apt-get update && apt-get clean && apt-get install -y build-essential
+#RUN apt-get -y install software-properties-common
 ### Docker and docker compose prerequisites
 RUN apt-get -y install gnupg
 RUN apt-get -y install ca-certificates
 RUN apt-get -y install lsb-release
+#RUN apt-get -y install jq
 RUN apt-get -y update
 #Download K8s
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -91,6 +93,24 @@ RUN usermod -aG docker jenkins
 
 # Add Telnet
 RUN apt-get -y install telnet
+
+# --- Tooling for the vault-secrets-sync pipeline (vault repo ci/Jenkinsfile) ---
+# kubectl is already installed above. Add jq + pinned vault / sops / age so the
+# pipeline doesn't download them on every build (faster + no runtime dependency
+# on releases.hashicorp.com / GitHub). Versions match ci/Jenkinsfile; the
+# pipeline's own download fallback still covers an un-rebuilt agent.
+ARG VAULT_VERSION=2.0.2
+ARG SOPS_VERSION=v3.13.1
+ARG AGE_VERSION=v1.3.1
+RUN apt-get -y install jq unzip
+RUN curl -fsSL "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip" -o /tmp/vault.zip \
+ && unzip -o /tmp/vault.zip -d /usr/local/bin && rm -f /tmp/vault.zip && vault --version
+RUN curl -fsSL "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64" -o /usr/local/bin/sops \
+ && chmod 0755 /usr/local/bin/sops && sops --version
+RUN curl -fsSL "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz" -o /tmp/age.tgz \
+ && tar -xzf /tmp/age.tgz -C /tmp \
+ && install -o root -g root -m 0755 /tmp/age/age /tmp/age/age-keygen /usr/local/bin/ \
+ && rm -rf /tmp/age.tgz /tmp/age && age --version
 
 # close root access
 USER jenkins
