@@ -1,4 +1,11 @@
-FROM jenkins/inbound-agent:latest
+# PINNED — do not put `latest` back. This is the base of the ONE agent image every app
+# build runs in, so an unpinned tag silently changes the JVM and the Jenkins remoting
+# version underneath every pipeline at once, on whatever day the image is next rebuilt.
+# 3385.vf1123fb_515da_-1-jdk21 is the remoting build that `latest` resolved to while the
+# cluster was running it (JDK 21.0.11) — pinning it changes nothing today and makes the
+# next rebuild reproducible. The jdk21 suffix is explicit on purpose: plain `latest` has
+# begun publishing jdk25 variants, so the default would drift a whole JVM major.
+FROM jenkins/inbound-agent:3385.vf1123fb_515da_-1-jdk21
 
 # run updates as root
 USER root

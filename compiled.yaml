@@ -168,7 +168,15 @@ spec:
       automountServiceAccountToken: true
       containers:
         - name: jenkins
-          image: jenkins/jenkins:latest
+          # PINNED — do not put `latest` back. `jenkins/jenkins:latest` is the WEEKLY
+          # release line, not LTS: it carries no support window and can ship a breaking
+          # change to the only deploy path this cluster has, on any pull. Pinned here to
+          # the weekly that was already running (2.576) rather than to LTS 2.568.2,
+          # because that LTS is OLDER than what JENKINS_HOME was written by — downgrading
+          # core under an existing home risks plugins that require a newer core failing to
+          # load. Move to the LTS line at the next LTS baseline >= 2.576, in one
+          # deliberate step. Bump this tag on purpose, never by pulling.
+          image: jenkins/jenkins:2.576
           imagePullPolicy: IfNotPresent
           env:
             - name: JAVA_OPTS
